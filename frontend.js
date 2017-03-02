@@ -19,18 +19,27 @@ connection.onopen = function (session) {
 
         session.subscribe("call.rest.jsonrpc", function (args, kwargs) {
                console.log("got event:", args);
-            }).then(
-               function (sub) {
-                   // console.log(sub);
-                  console.log("subscribed", sub.id);
-                  session.call('call.rest.jsonrpc', [url = 'http://dev-marketplace.probidder.com/api/sales', method = 'get', params = []]);
-               },
-               function (err) {
-                  console.log("error:", err);
-               }
-            );
-        //           session.call('call.rest.jsonrpc', [url = 'http://dev-marketplace.probidder.com/api/sales', method = 'get', params = []]);
+        }).then(
+            function (sub) {
+                // console.log(sub);
+                console.log("subscribed", sub.id);
+                session.call('call.rest.jsonrpc', [url = 'http://dev-marketplace.probidder.com/api/sales', method = 'get', params = []]);
+            },
+            function (err) {
+                console.log("error:", err);
+            }
+        );
 
+    // session.call('call.rest.jsonrpc', [url = 'http://dev-marketplace.probidder.com/api/sales', method = 'get', params = []]);
+
+    // session.call('call.rest.jsonrpc', [url = 'http://dev-marketplace.probidder.com/api/sales', method = 'get', params = []]).then(
+    //      function (res) {
+    //         console.log(res);
+    //      },
+    //      function (error) {
+    //         console.log(error);
+    //      }
+    // );
    // session.subscribe('com.call.sexydemo');
    // session.call('call.rest.jsonrpc', 'test1');
    // session.publish('com.call.sexydemo', 'test2');

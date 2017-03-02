@@ -81,14 +81,13 @@
                 },
                 {
                     "type": "websocket",
-                    "id": "tls_test0",
-                    "url": "wss://127.0.0.1:8083/ws",
                     "endpoint": {
                         "type": "tcp",
+                        "interface": "localhost",
                         "port": 8083,
                         "tls": {
-                            "key": "../../server.key",
-                            "certificate": "../../server.crt"
+                            "key": "server_key.pem",
+                            "certificate": "server_cert.pem"
                         }
                     }
                 }

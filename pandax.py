@@ -15,6 +15,57 @@ from twisted.internet._sslverify import OpenSSLCertificateAuthorities
 from twisted.internet.ssl import CertificateOptions
 from OpenSSL import crypto
 
+class JSONRPCService(ApplicationSession):
+    @wamp.register(u'com.call.rest')
+    def rest(self, x, y):
+        return x + y
+
+    @wamp.register(u'call.rest.jsonrpc')
+    def jsonrpc(self, url, method, params):
+        print('url: ' + url)
+        print('method: ' + method)
+        print(params)
+        session_factory = ApplicationSessionFactory()
+
+        ## .. and set the session class on the factory
+        ##
+        session_factory.session = PandaX
+
+        headers = {'content-type': 'application/json'}
+
+        # Example echo method
+        payload = {
+            "params": params,
+            "jsonrpc": "2.0",
+            "id": 0,
+        }
+
+        response = None
+
+        if method == 'get':
+            response = requests.get(
+                url, data=json.dumps(payload), headers=headers).json()
+        elif method == 'post':
+            response = requests.post(
+                url, data=json.dumps(payload), headers=headers).json()
+
+        self.publish(u'call.rest.jsonrpc', response)
+        return response
+
+        # if session_factory._myAppSession:
+        #     session_factory._myAppSession.publish('call.rest.jsonrpc', response)
+
+            # if response:
+            # assert response["result"] == "echome!"
+            # assert response["jsonrpc"]
+            # assert response["id"] == 0
+
+        # self.sexydemo.publish(u'com.call.sexydemo', 'tete')
+        # return 'tete'
+
+
+
+
 class PandaX(ApplicationSession):
     def __init__(self, config=None):
         ApplicationSession.__init__(self, config)
@@ -33,9 +84,6 @@ class PandaX(ApplicationSession):
     def onJoin(self, details):
         print("session joined")
         print(details)
-
-        def rest():
-            return x + y
 
         def jsonrpc(url, method, params):
             print('url: ' + url)
