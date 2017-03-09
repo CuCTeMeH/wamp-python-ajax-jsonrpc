@@ -2,6 +2,7 @@ from os import environ
 import six
 import requests
 import json
+# import Cookie
 
 from autobahn.twisted.wamp import ApplicationSession, ApplicationRunner, ApplicationSessionFactory
 from autobahn import wamp
@@ -23,6 +24,9 @@ class PandaX(ApplicationSession):
         print(self.config.realm)
         self.join(self.config.realm)
 
+        # This is called during the initial WebSocket opening handshake.
+
+
     @inlineCallbacks
     def onChallenge(self, challenge):
         print("authentication challenge received")
@@ -42,14 +46,13 @@ class PandaX(ApplicationSession):
             else:
                 print("registration ID {}: {}".format(res.id, res.procedure))
 
-    @inlineCallbacks
+    # @inlineCallbacks
     def onLeave(self, details):
         print("session left")
 
-    @inlineCallbacks
+    # @inlineCallbacks
     def onDisconnect(self):
         print("transport disconnected")
-
 
     @wamp.register(u'call.rest.jsonrpc')
     def jsonrpc(self, url, method, params):
@@ -82,7 +85,7 @@ class PandaX(ApplicationSession):
 if __name__ == '__main__':
     cert = crypto.load_certificate(
         crypto.FILETYPE_PEM,
-        six.u(open('./server.crt', 'r').read())
+        six.u(open('./probidder_fullchain.pem', 'r').read())
     )
 
     # tell Twisted to use just the one certificate we loaded to verify connections
@@ -92,7 +95,7 @@ if __name__ == '__main__':
 
     runner = ApplicationRunner(
         environ.get("AUTOBAHN_DEMO_ROUTER", u"ws://127.0.0.1:8080/ws"),
-        realm='crossbardemo',
+        realm='realm1',
         # ssl=options,  # try removing this, but still use self-signed cert
     )
 

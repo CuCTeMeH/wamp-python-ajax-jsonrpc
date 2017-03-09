@@ -3,16 +3,76 @@
     "workers": [
         {
             "type": "router",
+            "options": {
+                "pythonpath": [
+                    "../.."
+                ]
+            },
             "realms": [
                 {
-                    "name": "crossbardemo",
+                    "name": "realm1",
                     "roles": [
                         {
-                            "name": "anonymous",
+                            "name": "authenticator",
+                            "permissions": [
+                                {
+                                    "uri": "call.rest.authenticate",
+                                    "match": "exact",
+                                    "allow": {
+                                        "call": false,
+                                        "register": true,
+                                        "publish": false,
+                                        "subscribe": false
+                                    },
+                                    "disclose": {
+                                        "caller": false,
+                                        "publisher": false
+                                    },
+                                    "cache": true
+                                }
+                            ]
+                        },
+                        {
+                            "name": "backend",
                             "permissions": [
                                 {
                                     "uri": "",
                                     "match": "prefix",
+                                    "allow": {
+                                        "call": true,
+                                        "register": true,
+                                        "publish": true,
+                                        "subscribe": true
+                                    },
+                                    "disclose": {
+                                        "caller": false,
+                                        "publisher": false
+                                    },
+                                    "cache": true
+                                },
+                                {
+                                    "uri": "call.rest.jsonrpc",
+                                    "match": "exact",
+                                    "allow": {
+                                        "call": true,
+                                        "register": true,
+                                        "publish": true,
+                                        "subscribe": true
+                                    },
+                                    "disclose": {
+                                        "caller": true,
+                                        "publisher": true
+                                    },
+                                    "cache": true
+                                }
+                            ]
+                        },
+                        {
+                            "name": "frontend",
+                            "permissions": [
+                                {
+                                    "uri": "call.rest.jsonrpc",
+                                    "match": "exact",
                                     "allow": {
                                         "call": true,
                                         "register": true,
@@ -32,17 +92,6 @@
             ],
             "transports": [
                 {
-                    "type": "mqtt",
-                    "endpoint": {
-                        "type": "tcp",
-                        "port": 1883
-                    },
-                    "options": {
-                        "realm": "crossbardemo",
-                        "role": "anonymous"
-                    }
-                },
-                {
                     "type": "web",
                     "endpoint": {
                         "type": "tcp",
@@ -51,46 +100,39 @@
                     "paths": {
                         "/": {
                             "type": "static",
-                            "directory": "../..",
-                            "options": {
-                                "enable_directory_listing": true,
-                                "mime_types": {
-                                    ".md": "text/plain",
-                                    ".py": "text/plain"
-                                }
-                            }
+                            "directory": "../.."
                         },
                         "ws": {
-                            "type": "websocket"
-                        },
-                        "auth_ws": {
                             "type": "websocket",
+                            "cookie": {
+                                "store": {
+                                    "type": "memory"
+                                }
+                            },
                             "auth": {
                                 "wampcra": {
-                                    "type": "static",
-                                    "users": {
-                                        "username": {
-                                            "secret": "p4ssw0rd",
-                                            "role": "authenticated"
-                                        }
-                                    }
+                                    "type": "dynamic",
+                                    "authenticator": "call.rest.authenticate"
+                                },
+                                "cookie": {
                                 }
                             }
                         }
                     }
+                }
+            ],
+            "components": [
+                {
+                    "type": "class",
+                    "classname": "authenticator.PandaXAuthenticator",
+                    "realm": "realm1",
+                    "role": "authenticator"
                 },
                 {
-                    "type": "websocket",
-                    "id": "tls_test0",
-                    "url": "wss://127.0.0.1:8083/ws",
-                    "endpoint": {
-                        "type": "tcp",
-                        "port": 8083,
-                        "tls": {
-                            "key": "../../server.key",
-                            "certificate": "../../server.crt"
-                        }
-                    }
+                    "type": "class",
+                    "classname": "pandaxServer.PandaX",
+                    "realm": "realm1",
+                    "role": "backend"
                 }
             ]
         }
