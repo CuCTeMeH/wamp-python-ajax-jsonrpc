@@ -1,6 +1,5 @@
 from autobahn.twisted.wamp import ApplicationSession, ApplicationRunner, ApplicationSessionFactory
 from autobahn import wamp
-
 from twisted.internet.defer import inlineCallbacks
 from twisted.python.failure import Failure
 

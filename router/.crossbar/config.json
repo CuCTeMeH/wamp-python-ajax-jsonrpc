@@ -10,7 +10,7 @@
             },
             "realms": [
                 {
-                    "name": "realm1",
+                    "name": "probidder",
                     "roles": [
                         {
                             "name": "authenticator",
@@ -45,21 +45,6 @@
                                         "subscribe": true
                                     },
                                     "disclose": {
-                                        "caller": false,
-                                        "publisher": false
-                                    },
-                                    "cache": true
-                                },
-                                {
-                                    "uri": "call.rest.jsonrpc",
-                                    "match": "exact",
-                                    "allow": {
-                                        "call": true,
-                                        "register": true,
-                                        "publish": true,
-                                        "subscribe": true
-                                    },
-                                    "disclose": {
                                         "caller": true,
                                         "publisher": true
                                     },
@@ -71,12 +56,12 @@
                             "name": "frontend",
                             "permissions": [
                                 {
-                                    "uri": "call.rest.jsonrpc",
-                                    "match": "exact",
+                                    "uri": "",
+                                    "match": "prefix",
                                     "allow": {
                                         "call": true,
-                                        "register": true,
-                                        "publish": true,
+                                        "register": false,
+                                        "publish": false,
                                         "subscribe": true
                                     },
                                     "disclose": {
@@ -125,13 +110,13 @@
                 {
                     "type": "class",
                     "classname": "authenticator.PandaXAuthenticator",
-                    "realm": "realm1",
+                    "realm": "probidder",
                     "role": "authenticator"
                 },
                 {
                     "type": "class",
                     "classname": "pandaxServer.PandaX",
-                    "realm": "realm1",
+                    "realm": "probidder",
                     "role": "backend"
                 }
             ]
