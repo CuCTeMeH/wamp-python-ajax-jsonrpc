@@ -80,7 +80,12 @@
                     "type": "web",
                     "endpoint": {
                         "type": "tcp",
-                        "port": 8080
+                        "port": 8080,
+                        "tls": {
+                            "certificate": "probidder_fullchain.pem",
+                            "key": "probidder_privkey_nopass.pem",
+                            "dhparam": "dhparam.pem"
+                        }
                     },
                     "paths": {
                         "/": {

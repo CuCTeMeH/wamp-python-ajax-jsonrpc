@@ -32,7 +32,7 @@ function onchallenge (session, method, extra) {
 
 
 var connection = new autobahn.Connection({
-   url: 'ws://127.0.0.1:8080/ws',
+   url: 'wss://ws_test.probidder.com:8080/ws',
    realm: 'probidder',
 
    // The following authentication information is for authenticating
