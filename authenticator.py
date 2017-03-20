@@ -3,13 +3,12 @@ from autobahn import wamp
 from twisted.internet.defer import inlineCallbacks
 from twisted.python.failure import Failure
 from http.cookies import SimpleCookie
-from cryptography.x509 import load_pem_x509_certificate
-from cryptography.hazmat.backends import default_backend
 import redis
 import requests
 import json
 import jwt
 import time
+
 
 class PandaXAuthenticator(ApplicationSession):
     redis_jwt_key = 'jwt-python'

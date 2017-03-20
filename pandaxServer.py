@@ -6,6 +6,7 @@ from twisted.internet.defer import inlineCallbacks
 from authenticator import PandaXAuthenticator
 from http.cookies import SimpleCookie
 
+
 class PandaX(ApplicationSession):
     def __init__(self, config=None):
         ApplicationSession.__init__(self, config)
