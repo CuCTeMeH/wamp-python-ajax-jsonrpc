@@ -2,16 +2,22 @@ from autobahn.twisted.wamp import ApplicationSession, ApplicationRunner, Applica
 from autobahn import wamp
 from twisted.internet.defer import inlineCallbacks
 from twisted.python.failure import Failure
+from http.cookies import SimpleCookie
+from cryptography.x509 import load_pem_x509_certificate
+from cryptography.hazmat.backends import default_backend
+import redis
 import requests
 import json
-from http.cookies import SimpleCookie
-
+import jwt
+import time
 
 class PandaXAuthenticator(ApplicationSession):
+    redis_jwt_key = 'jwt-python'
+
     @inlineCallbacks
     def onJoin(self, details):
-        print("session joined")
-        print(details)
+        # print("session joined")
+        # print(details)
 
         results = []
         res = yield self.register(self)
@@ -37,8 +43,7 @@ class PandaXAuthenticator(ApplicationSession):
         for key, morsel in cookie.items():
             cookies[key] = morsel.value
 
-        token = self.get_auth_token()
-        user = self.is_logged_in(token, cookies)
+        user = self.is_logged_in(cookies)
 
 
         # pass the cookies to the auth server so that we can check if the user is authenticated. Then return the correct fucking thing and then be done with the auth shit thingy.
@@ -63,25 +68,65 @@ class PandaXAuthenticator(ApplicationSession):
 
     @staticmethod
     def get_auth_token():
+        r = redis.StrictRedis(host='localhost', port=6379, db=0)
+        # token = r.get(PandaXAuthenticator.redis_jwt_key)
+
+        # if token:
+        #     return token
+
+        encoding_payload = {
+            'aud': 'https://dev-auth.probidder.com',
+            'exp': int(time.time() + 1000),
+            'iat': int(time.time()),
+            'sub': 'CertSale',
+            'iss': 'marketplace'
+        }
+
+        pem_file = open("../../marketplace.key", 'r')
+        key_string = pem_file.read()
+        pem_file.close()
+
+        encoded_key = jwt.encode(encoding_payload, algorithm='RS512', key=key_string)
+
+        # print(encoded_key)
         headers = {'content-type': 'application/json'}
+
+        payload = {
+            "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
+            "assertion": encoded_key.decode("utf-8")
+        }
+        print(payload)
+
+        response = requests.post('https://dev-auth.probidder.com/api/oauth/token',
+                                 data=json.dumps(payload), headers=headers).json()
+        print(response)
+        r.set(PandaXAuthenticator.redis_jwt_key, response['access_token'])
+
+        return response['access_token']
+
+    @staticmethod
+    def is_logged_in(cookies):
+        token = PandaXAuthenticator.get_auth_token()
+        # print(token)
+        # return True
+
+        headers = {'content-type': 'application/json', 'Authorization': 'Bearer ' + token}
         payload = {
             "jsonrpc": "2.0",
             "id": 0,
         }
 
-        response = requests.get('', data=json.dumps(payload), headers=headers).json()
+        r = redis.StrictRedis(host='localhost', port=6379, db=0)
 
-        return 123123
+        # try:
+        response = requests.get('https://dev-auth.probidder.com/api/authenticate/check',
+                                data=json.dumps(payload), headers=headers, cookies=cookies).json()
+        # except Exception as e:
+            # r.delete(PandaXAuthenticator.redis_jwt_key)
+            # return PandaXAuthenticator.is_logged_in(cookies)
 
-    @staticmethod
-    def is_logged_in(token, cookies):
+        # if response and response['error']:
+        #     r.delete(PandaXAuthenticator.redis_jwt_key)
+        #     return PandaXAuthenticator.is_logged_in(cookies)
 
-        # headers = {'content-type': 'application/json'}
-        # payload = {
-        #     "jsonrpc": "2.0",
-        #     "id": 0,
-        # }
-        #
-        # response = requests.get('', data=json.dumps(payload), headers=headers, cookies=cookies).json()
-
-        return 123123
+        return response

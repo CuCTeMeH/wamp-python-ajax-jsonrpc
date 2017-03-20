@@ -39,22 +39,25 @@ class PandaX(ApplicationSession):
         # print(params)
         # print(PandaXAuthenticator.get_auth_token())
         # print(self.cookies)
-
-        procedure = details.procedure
-        headers = {'content-type': 'application/json'}
-        payload = {
-            "params": params,
-            "jsonrpc": "2.0",
-            "id": 0,
-        }
+        token = PandaXAuthenticator.get_auth_token()
+        is_logged_in = PandaXAuthenticator.is_logged_in(self.cookies)
         response = None
 
-        if method == 'get':
-            response = requests.get(url, data=json.dumps(payload), headers=headers, cookies=self.cookies).json()
-        elif method == 'post':
-            response = requests.post(url, data=json.dumps(payload), headers=headers, cookies=self.cookies).json()
+        if is_logged_in or params['allow_anonymous']:
+            procedure = details.procedure
+            headers = {'content-type': 'application/json', 'Authorization': 'Bearer ' + token}
+            payload = {
+                "params": params,
+                "jsonrpc": "2.0",
+                "id": 0,
+            }
 
-        if publish:
-            self.publish(procedure, response)
+            if method == 'get':
+                response = requests.get(url, data=json.dumps(payload), headers=headers, cookies=self.cookies).json()
+            elif method == 'post':
+                response = requests.post(url, data=json.dumps(payload), headers=headers, cookies=self.cookies).json()
+
+            if publish:
+                self.publish(procedure, response)
 
         return response
