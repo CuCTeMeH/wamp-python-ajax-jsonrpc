@@ -1,5 +1,6 @@
 from autobahn.twisted.wamp import ApplicationSession, ApplicationRunner, ApplicationSessionFactory
 from autobahn import wamp
+from autobahn.wamp.exception import ApplicationError
 from twisted.internet.defer import inlineCallbacks
 from twisted.python.failure import Failure
 from http.cookies import SimpleCookie
@@ -8,6 +9,7 @@ import requests
 import json
 import jwt
 import time
+import urllib
 
 
 class PandaXAuthenticator(ApplicationSession):
@@ -40,38 +42,52 @@ class PandaXAuthenticator(ApplicationSession):
         # which is incompatible with requests. Manually construct a dictionary instead.
         cookies = {}
         for key, morsel in cookie.items():
+            if key == 'laravel_oauth_session':
+                token = PandaXAuthenticator.get_auth_token()
+                # print(token)
+                headers = {
+                    'content-type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                }
+                payload = {
+                    "cookie": urllib.parse.unquote(morsel.value)
+                }
+                # print(payload)
+
+                response = requests.post('https://dev-auth.probidder.com/api/cookie/decrypt',
+                                         data=json.dumps(payload), headers=headers).json()
+
+                type(response)
+                # if response['error']:
+                #     raise ApplicationError(u'call.rest.authenticate.jwt',
+                #                            'could not authenticate jwt {}'.format(authid))
+                if response['status']:
+                    morsel.value = response['cookie']
+
             cookies[key] = morsel.value
 
+        # print(cookies)
         user = self.is_logged_in(cookies)
 
+        # print(user)
 
-        # pass the cookies to the auth server so that we can check if the user is authenticated. Then return the correct fucking thing and then be done with the auth shit thingy.
-
-
-        # print(self)
-        # check database for user session or make a rest call to the auth api with the request cookie so that we can be sure the user is logged in.
-        # if(authid == 'joe'):
-        return {
-            # these are required:
-            'secret': 'probid',  # the secret/password to be used
-            'role': 'frontend'    # the auth role to be assigned when authentication succeeds
-        }
-        # else:
-            # raise ApplicationError(u'call.rest.authenticate.no_such_user',
-            #                        'could not authenticate session - no such user {}'.format(authid))
-        # if authid in USERDB:
-        # return a dictionary with authentication information ...
-        #     return USERDB[authid]
-        # else:
-        #     raise ApplicationError(u'com.example.no_such_user', 'could not authenticate session - no such user {}'.format(authid))
+        if user['status'] and user['user']['username'] == authid:
+            return {
+                # these are required:
+                'secret': str(user['user']['username']),  # the secret/password to be used
+                'role': 'frontend'  # the auth role to be assigned when authentication succeeds
+            }
+        else:
+            raise ApplicationError(u'call.rest.authenticate.no_such_user',
+                                   'could not authenticate session - no such user {}'.format(authid))
 
     @staticmethod
     def get_auth_token():
         r = redis.StrictRedis(host='localhost', port=6379, db=0)
-        # token = r.get(PandaXAuthenticator.redis_jwt_key)
+        token = r.get(PandaXAuthenticator.redis_jwt_key)
 
-        # if token:
-        #     return token
+        if token:
+            return token.decode("utf-8")
 
         encoding_payload = {
             'aud': 'https://dev-auth.probidder.com',
@@ -88,17 +104,19 @@ class PandaXAuthenticator(ApplicationSession):
         encoded_key = jwt.encode(encoding_payload, algorithm='RS512', key=key_string)
 
         # print(encoded_key)
-        headers = {'content-type': 'application/json'}
+        headers = {
+            'content-type': 'application/json'
+        }
 
         payload = {
             "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
             "assertion": encoded_key.decode("utf-8")
         }
-        print(payload)
+        # print(payload)
 
         response = requests.post('https://dev-auth.probidder.com/api/oauth/token',
                                  data=json.dumps(payload), headers=headers).json()
-        print(response)
+        # print(response)
         r.set(PandaXAuthenticator.redis_jwt_key, response['access_token'])
 
         return response['access_token']
@@ -109,7 +127,10 @@ class PandaXAuthenticator(ApplicationSession):
         # print(token)
         # return True
 
-        headers = {'content-type': 'application/json', 'Authorization': 'Bearer ' + token}
+        headers = {
+            'content-type': 'application/json',
+            'Authorization': 'Bearer ' + token
+        }
         payload = {
             "jsonrpc": "2.0",
             "id": 0,
@@ -117,15 +138,17 @@ class PandaXAuthenticator(ApplicationSession):
 
         r = redis.StrictRedis(host='localhost', port=6379, db=0)
 
-        # try:
-        response = requests.get('https://dev-auth.probidder.com/api/authenticate/check',
-                                data=json.dumps(payload), headers=headers, cookies=cookies).json()
-        # except Exception as e:
-            # r.delete(PandaXAuthenticator.redis_jwt_key)
-            # return PandaXAuthenticator.is_logged_in(cookies)
+        try:
+            response = requests.get('https://dev-auth.probidder.com/api/authenticate/check',
+                                    data=json.dumps(payload), headers=headers, cookies=cookies).json()
+        except Exception as e:
+            r.delete(PandaXAuthenticator.redis_jwt_key)
+            return PandaXAuthenticator.is_logged_in(cookies)
 
-        # if response and response['error']:
-        #     r.delete(PandaXAuthenticator.redis_jwt_key)
-        #     return PandaXAuthenticator.is_logged_in(cookies)
+        # check here something funky happens. when first connected to socket the cookies are sent but after that the cookies are not sent and the response always returns {'status': False, 'error': {'code': 'PMEIL', 'message': 'User is not logged in.'}}
+        if response:
+            if 'error' in response:
+                r.delete(PandaXAuthenticator.redis_jwt_key)
+                return PandaXAuthenticator.is_logged_in(cookies)
 
         return response

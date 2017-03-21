@@ -46,7 +46,10 @@ class PandaX(ApplicationSession):
 
         if is_logged_in or params['allow_anonymous']:
             procedure = details.procedure
-            headers = {'content-type': 'application/json', 'Authorization': 'Bearer ' + token}
+            headers = {
+                'content-type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            }
             payload = {
                 "params": params,
                 "jsonrpc": "2.0",
@@ -57,6 +60,10 @@ class PandaX(ApplicationSession):
                 response = requests.get(url, data=json.dumps(payload), headers=headers, cookies=self.cookies).json()
             elif method == 'post':
                 response = requests.post(url, data=json.dumps(payload), headers=headers, cookies=self.cookies).json()
+
+            if response:
+                if 'error' in response:
+                    return self.jsonrpc(self, url, method, params, publish, details)
 
             if publish:
                 self.publish(procedure, response)
