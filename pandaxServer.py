@@ -61,9 +61,8 @@ class PandaX(ApplicationSession):
             elif method == 'post':
                 response = requests.post(url, data=json.dumps(payload), headers=headers, cookies=self.cookies).json()
 
-            if response:
-                if 'error' in response:
-                    return self.jsonrpc(self, url, method, params, publish, details)
+            if response and 'error' in response:
+                return self.jsonrpc(self, url, method, params, publish, details)
 
             if publish:
                 self.publish(procedure, response)
