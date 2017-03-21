@@ -57,10 +57,10 @@ class PandaXAuthenticator(ApplicationSession):
                 response = requests.post('https://dev-auth.probidder.com/api/cookie/decrypt',
                                          data=json.dumps(payload), headers=headers).json()
 
-                type(response)
-                # if response['error']:
-                #     raise ApplicationError(u'call.rest.authenticate.jwt',
-                #                            'could not authenticate jwt {}'.format(authid))
+                if response and 'error' in response:
+                    raise ApplicationError(u'call.rest.authenticate.jwt',
+                                           'could not authenticate jwt {}'.format(authid))
+
                 if response['status']:
                     morsel.value = response['cookie']
 
@@ -145,7 +145,6 @@ class PandaXAuthenticator(ApplicationSession):
             r.delete(PandaXAuthenticator.redis_jwt_key)
             return PandaXAuthenticator.is_logged_in(cookies)
 
-        # check here something funky happens. when first connected to socket the cookies are sent but after that the cookies are not sent and the response always returns {'status': False, 'error': {'code': 'PMEIL', 'message': 'User is not logged in.'}}
         if response and 'error' in response:
             r.delete(PandaXAuthenticator.redis_jwt_key)
             return PandaXAuthenticator.is_logged_in(cookies)

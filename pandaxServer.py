@@ -1,10 +1,12 @@
-import requests
-import json
 from autobahn.twisted.wamp import ApplicationSession, ApplicationRunner, ApplicationSessionFactory
 from autobahn.wamp.types import RegisterOptions
+from autobahn.wamp.exception import ApplicationError
 from twisted.internet.defer import inlineCallbacks
 from authenticator import PandaXAuthenticator
 from http.cookies import SimpleCookie
+import requests
+import json
+import urllib
 
 
 class PandaX(ApplicationSession):
@@ -32,7 +34,30 @@ class PandaX(ApplicationSession):
         # which is incompatible with requests. Manually construct a dictionary instead.
         cookies = {}
         for key, morsel in cookie.items():
+            if key == 'laravel_oauth_session':
+                token = PandaXAuthenticator.get_auth_token()
+                # print(token)
+                headers = {
+                    'content-type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                }
+                payload = {
+                    "cookie": urllib.parse.unquote(morsel.value)
+                }
+                # print(payload)
+
+                response = requests.post('https://dev-auth.probidder.com/api/cookie/decrypt',
+                                         data=json.dumps(payload), headers=headers).json()
+
+                if response and 'error' in response:
+                    raise ApplicationError(u'call.rest.authenticate.jwt',
+                                           'could not authenticate jwt {}'.format(authid))
+
+                if response['status']:
+                    morsel.value = response['cookie']
+
             cookies[key] = morsel.value
+
         self.cookies = cookies
 
     def jsonrpc(self, url, method, params, publish=True, details=None):
