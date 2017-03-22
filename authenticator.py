@@ -31,38 +31,49 @@ class PandaXAuthenticator(ApplicationSession):
                 print("registration ID {}: {}".format(res.id, res.procedure))
 
     @wamp.register(u'call.rest.authenticate')
-    def authenticate(self, realm, authid, details):
+    def authenticate(self, realm, authid, details, recurse=True):
         # print("WAMP-CRA dynamic authenticator invoked: realm='{}', authid='{}'".format(realm, authid))
         # print(details)
         #
         cookie = SimpleCookie()
         cookie.load(details.get('transport', {}).get('http_headers_received', {}).get('cookie', {}))
 
+        # print('authenticate')
         # Even though SimpleCookie is dictionary-like, it internally uses a Morsel object
         # which is incompatible with requests. Manually construct a dictionary instead.
         cookies = {}
+        r = redis.StrictRedis(host='localhost', port=6379, db=0)
+
         for key, morsel in cookie.items():
             if key == 'laravel_oauth_session':
-                token = PandaXAuthenticator.get_auth_token()
-                # print(token)
-                headers = {
-                    'content-type': 'application/json',
-                    'Authorization': 'Bearer ' + token
-                }
-                payload = {
-                    "cookie": urllib.parse.unquote(morsel.value)
-                }
-                # print(payload)
+                if r.exists(morsel.value):
+                    morsel.value = r.get(morsel.value).decode("utf-8")
+                else:
+                    token = PandaXAuthenticator.get_auth_token()
 
-                response = requests.post('https://dev-auth.probidder.com/api/cookie/decrypt',
-                                         data=json.dumps(payload), headers=headers).json()
+                    headers = {
+                        'content-type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    }
+                    payload = {
+                        "cookie": urllib.parse.unquote(morsel.value)
+                    }
+                    # print(payload)
 
-                if response and 'error' in response:
-                    raise ApplicationError(u'call.rest.authenticate.jwt',
-                                           'could not authenticate jwt {}'.format(authid))
+                    response = requests.post('https://dev-auth.probidder.com/api/cookie/decrypt',
+                                             data=json.dumps(payload), headers=headers).json()
 
-                if response['status']:
-                    morsel.value = response['cookie']
+                    if response and 'error' in response:
+                        if recurse is False:
+                            raise ApplicationError(u'call.rest.authenticate',
+                                                   'could not authenticate session')
+
+                        r.delete(PandaXAuthenticator.redis_jwt_key)
+                        return self.authenticate(self, realm, authid, details, False)
+
+                    if response['status']:
+                        r.set(morsel.value, response['cookie'])
+                        morsel.value = response['cookie']
 
             cookies[key] = morsel.value
 
@@ -122,9 +133,10 @@ class PandaXAuthenticator(ApplicationSession):
         return response['access_token']
 
     @staticmethod
-    def is_logged_in(cookies):
+    def is_logged_in(cookies, recurse=True):
         token = PandaXAuthenticator.get_auth_token()
         # print(token)
+        # print('is_logged_in')
         # return True
 
         headers = {
@@ -142,11 +154,19 @@ class PandaXAuthenticator(ApplicationSession):
             response = requests.get('https://dev-auth.probidder.com/api/authenticate/check',
                                     data=json.dumps(payload), headers=headers, cookies=cookies).json()
         except Exception as e:
+            if recurse is False:
+                raise ApplicationError(u'call.rest.is_logged_in',
+                                       'could not authenticate session')
+
             r.delete(PandaXAuthenticator.redis_jwt_key)
-            return PandaXAuthenticator.is_logged_in(cookies)
+            return PandaXAuthenticator.is_logged_in(cookies, False)
 
         if response and 'error' in response:
+            if recurse is False:
+                raise ApplicationError(u'call.rest.is_logged_in',
+                                       'could not authenticate session')
+
             r.delete(PandaXAuthenticator.redis_jwt_key)
-            return PandaXAuthenticator.is_logged_in(cookies)
+            return PandaXAuthenticator.is_logged_in(cookies, False)
 
         return response

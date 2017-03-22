@@ -7,6 +7,7 @@ from http.cookies import SimpleCookie
 import requests
 import json
 import urllib
+import redis
 
 
 class PandaX(ApplicationSession):
@@ -33,35 +34,40 @@ class PandaX(ApplicationSession):
         # Even though SimpleCookie is dictionary-like, it internally uses a Morsel object
         # which is incompatible with requests. Manually construct a dictionary instead.
         cookies = {}
+        r = redis.StrictRedis(host='localhost', port=6379, db=0)
+
         for key, morsel in cookie.items():
             if key == 'laravel_oauth_session':
-                token = PandaXAuthenticator.get_auth_token()
-                # print(token)
-                headers = {
-                    'content-type': 'application/json',
-                    'Authorization': 'Bearer ' + token
-                }
-                payload = {
-                    "cookie": urllib.parse.unquote(morsel.value)
-                }
-                # print(payload)
+                if r.exists(morsel.value):
+                    morsel.value = r.get(morsel.value).decode("utf-8")
+                else:
+                    token = PandaXAuthenticator.get_auth_token()
+                    # print(token)
+                    headers = {
+                        'content-type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    }
+                    payload = {
+                        "cookie": urllib.parse.unquote(morsel.value)
+                    }
 
-                response = requests.post('https://dev-auth.probidder.com/api/cookie/decrypt',
-                                         data=json.dumps(payload), headers=headers).json()
+                    response = requests.post('https://dev-auth.probidder.com/api/cookie/decrypt',
+                                             data=json.dumps(payload), headers=headers).json()
 
-                if response and 'error' in response:
-                    raise ApplicationError(u'call.rest.authenticate.jwt',
-                                           'could not authenticate jwt {}'.format(authid))
+                    if response and 'error' in response:
+                        r.delete(PandaXAuthenticator.redis_jwt_key)
+                        return self.on_session_join(self, session_details)
 
-                if response['status']:
-                    morsel.value = response['cookie']
+                    if response['status']:
+                        r.set(morsel.value, response['cookie'])
+                        morsel.value = response['cookie']
 
             cookies[key] = morsel.value
-
+        # print(cookies)
         self.cookies = cookies
 
-    def jsonrpc(self, url, method, params, publish=True, details=None):
-        # print(details)
+    def jsonrpc(self, url, method, params, publish=True, details=None, recurse=True):
+        # print('jsonrpc')
         # print(params)
         # print(PandaXAuthenticator.get_auth_token())
         # print(self.cookies)
@@ -87,7 +93,11 @@ class PandaX(ApplicationSession):
                 response = requests.post(url, data=json.dumps(payload), headers=headers, cookies=self.cookies).json()
 
             if response and 'error' in response:
-                return self.jsonrpc(self, url, method, params, publish, details)
+                if recurse is False:
+                    raise ApplicationError(u'call.rest.authenticate',
+                                           'could not authenticate session')
+
+                return self.jsonrpc(self, url, method, params, publish, details, False)
 
             if publish:
                 self.publish(procedure, response)
