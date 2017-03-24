@@ -1,7 +1,7 @@
 Crossbar.io node private key - KEEP THIS SAFE!
 
 creator: CuCTeMeH@MacBook-Pro.local
-created-at: 2017-03-16T07:40:33.702Z
+created-at: 2017-03-24T11:57:01.791Z
 machine-id: C17FR6TXDH2G
-public-key-ed25519: 78a73aaa06e9f6e11738db6b0211eefd7ab16d74edeed418fd0aa7c728b13554
-private-key-ed25519: 1fba7142c26978570dbabd3900a72ea8c8ae67952448ea752e6a99ad6a1ef107
+public-key-ed25519: c94cd04397ac919ad174608746715a5f1113a6e24948664f7df83a6ebbc45835
+private-key-ed25519: 114a3f0228c07839aa23dfd798e25457500d5c5bdd1844c07cdb8c779db79306

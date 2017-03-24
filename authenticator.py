@@ -104,11 +104,11 @@ class PandaXAuthenticator(ApplicationSession):
             'aud': 'https://dev-auth.probidder.com',
             'exp': int(time.time() + 1000),
             'iat': int(time.time()),
-            'sub': 'CertSale',
-            'iss': 'marketplace'
+            'sub': 'WS',
+            'iss': 'ws'
         }
 
-        pem_file = open("../../marketplace.key", 'r')
+        pem_file = open("../../bearer/wamp_ws.key", 'r')
         key_string = pem_file.read()
         pem_file.close()
 
@@ -128,9 +128,12 @@ class PandaXAuthenticator(ApplicationSession):
         response = requests.post('https://dev-auth.probidder.com/api/oauth/token',
                                  data=json.dumps(payload), headers=headers).json()
         # print(response)
-        r.set(PandaXAuthenticator.redis_jwt_key, response['access_token'])
+        if 'access_token' in response:
+            r.set(PandaXAuthenticator.redis_jwt_key, response['access_token'])
+            return response['access_token']
 
-        return response['access_token']
+        raise ApplicationError(u'call.rest.no_access_token',
+                               'No access token')
 
     @staticmethod
     def is_logged_in(cookies, recurse=True):
