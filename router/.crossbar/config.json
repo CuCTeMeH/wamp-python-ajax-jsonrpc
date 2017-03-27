@@ -107,6 +107,19 @@
                                 "cookie": {
                                 }
                             }
+                        },
+                        "publish": {
+                            "type": "publisher",
+                            "realm": "probidder",
+                            "role": "anonymous",
+                            "options": {
+                                "key": "probidder_publisher",
+                                "secret": "JyPZO6GVLC4Dnatq",
+                                "require_ip": [
+                                    "127.0.0.1"
+                                ],
+                                "require_tls": false
+                            }
                         }
                     }
                 }
