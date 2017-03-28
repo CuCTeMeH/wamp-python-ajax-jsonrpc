@@ -65,7 +65,7 @@ class PandaXAuthenticator(ApplicationSession):
 
                     if response and 'error' in response:
                         if recurse is False:
-                            raise ApplicationError(u'call.rest.authenticate',
+                            raise ApplicationError(u'call.rest.error.authenticate',
                                                    'could not authenticate session')
 
                         r.delete(PandaXAuthenticator.redis_jwt_key)
@@ -89,7 +89,7 @@ class PandaXAuthenticator(ApplicationSession):
                 'role': 'frontend'  # the auth role to be assigned when authentication succeeds
             }
         else:
-            raise ApplicationError(u'call.rest.authenticate.no_such_user',
+            raise ApplicationError(u'call.rest.error.authenticate.no_such_user',
                                    'could not authenticate session - no such user {}'.format(authid))
 
     @staticmethod
@@ -132,7 +132,7 @@ class PandaXAuthenticator(ApplicationSession):
             r.set(PandaXAuthenticator.redis_jwt_key, response['access_token'])
             return response['access_token']
 
-        raise ApplicationError(u'call.rest.no_access_token',
+        raise ApplicationError(u'call.rest.error.no_access_token',
                                'No access token')
 
     @staticmethod
@@ -158,7 +158,7 @@ class PandaXAuthenticator(ApplicationSession):
                                     data=json.dumps(payload), headers=headers, cookies=cookies).json()
         except Exception as e:
             if recurse is False:
-                raise ApplicationError(u'call.rest.is_logged_in',
+                raise ApplicationError(u'call.rest.error.is_logged_in',
                                        'could not authenticate session')
 
             r.delete(PandaXAuthenticator.redis_jwt_key)
@@ -166,7 +166,7 @@ class PandaXAuthenticator(ApplicationSession):
 
         if response and 'error' in response:
             if recurse is False:
-                raise ApplicationError(u'call.rest.is_logged_in',
+                raise ApplicationError(u'call.rest.error.is_logged_in',
                                        'could not authenticate session')
 
             r.delete(PandaXAuthenticator.redis_jwt_key)

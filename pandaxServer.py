@@ -94,7 +94,7 @@ class PandaX(ApplicationSession):
 
             if response and 'error' in response:
                 if recurse is False:
-                    raise ApplicationError(u'call.rest.authenticate',
+                    raise ApplicationError(u'call.rest.error.authenticate',
                                            'could not authenticate session')
 
                 return self.jsonrpc(self, url, method, params, publish, details, False)
