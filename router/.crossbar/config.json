@@ -111,7 +111,7 @@
                         "publish": {
                             "type": "publisher",
                             "realm": "probidder",
-                            "role": "anonymous",
+                            "role": "backend",
                             "options": {
                                 "key": "probidder_publisher",
                                 "secret": "JyPZO6GVLC4Dnatq",
