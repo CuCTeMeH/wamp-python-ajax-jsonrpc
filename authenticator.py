@@ -32,6 +32,15 @@ class PandaXAuthenticator(ApplicationSession):
 
     @wamp.register(u'call.rest.authenticate')
     def authenticate(self, realm, authid, details, recurse=True):
+        """
+        Authenticate method that sets ctbid cookie for further authentication not needed to ping the service each time a new request is made.
+        
+        :param realm: 
+        :param authid: 
+        :param details: 
+        :param recurse: 
+        :return: 
+        """
         # print("WAMP-CRA dynamic authenticator invoked: realm='{}', authid='{}'".format(realm, authid))
         # print(details)
         #
@@ -94,6 +103,11 @@ class PandaXAuthenticator(ApplicationSession):
 
     @staticmethod
     def get_auth_token():
+        """
+        Get the Auth token to be used for every request. Store the token until new one needs to be done.
+        
+        :return: 
+        """
         r = redis.StrictRedis(host='localhost', port=6379, db=0)
         token = r.get(PandaXAuthenticator.redis_jwt_key)
 
@@ -137,6 +151,13 @@ class PandaXAuthenticator(ApplicationSession):
 
     @staticmethod
     def is_logged_in(cookies, recurse=True):
+        """
+        Check if user is logged in using the Auth REST service. Passing the user cookies and token.
+        
+        :param cookies: 
+        :param recurse: 
+        :return: 
+        """
         token = PandaXAuthenticator.get_auth_token()
         # print(token)
         # print('is_logged_in')
