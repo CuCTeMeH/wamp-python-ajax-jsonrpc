@@ -103,6 +103,7 @@ class PandaX(ApplicationSession):
             }
             payload = {
                 "params": params,
+                'publish': publish,
                 "jsonrpc": "2.0",
                 "id": 0,
             }
@@ -119,7 +120,7 @@ class PandaX(ApplicationSession):
 
                 return self.jsonrpc(self, url, method, params, publish, details, False)
 
-            if publish:
+            if response.publish:
                 self.publish(procedure, response)
 
         return response
