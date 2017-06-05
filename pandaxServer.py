@@ -25,9 +25,25 @@ class PandaX(ApplicationSession):
     @inlineCallbacks
     def onJoin(self, details):
         yield self.subscribe(self.on_session_join, u'wamp.session.on_join')
+        yield self.subscribe(self.on_leave, u'wamp.session.on_leave')
         yield self.subscribe(self.on_subscribe, u'wamp.subscription.on_subscribe')
         yield self.subscribe(self.on_subscribe_create, u'wamp.subscription.on_create')
         yield self.register(self.jsonrpc, u"jsonrpc.", options=RegisterOptions(match=u"prefix", details_arg="details"))
+
+    def on_leave(self, session):
+        # print(session)
+        user_sessions = self.user_sessions
+        # print(type(user_sessions))
+        # print('LEAVING SESSION')
+        for user_id, sessions in user_sessions.items():
+            for session_id, s_id in sessions.copy().items():
+                if session_id == session:
+                    sessions.pop(session_id)
+                    # del(user_sessions[user_id][session_id])
+            # print(v)
+        # print(user_sessions)
+        # print('LEAVING SESSION')
+        self.user_sessions = user_sessions
 
     def on_subscribe_create(self, session, subscription_details):
         topic = subscription_details['uri']
@@ -82,9 +98,7 @@ class PandaX(ApplicationSession):
     def on_session_join(self, session_details):
         """
         We store the cookies here in the this session variable foreach session.
-        
-        Todo: Maybe refactor this to use redis because self can be overwritten any time. But if not needed there is no need to overcomplicate stuff with adding a redis set and get and cleanup when the cookie expires.
-        
+
         :param session_details: 
         :return: 
         """
@@ -105,7 +119,7 @@ class PandaX(ApplicationSession):
                 self.user_sessions[user_id] = {}
             self.user_sessions[user_id][session_id] = session_id
 
-        # print(self.user_sessions)
+        print(self.user_sessions)
         # print(logged_user)
         # if logged_user and 'user' in logged_user:
         #     self.user_sessions[logged_user['user']['id']][session_id] =  session_id
