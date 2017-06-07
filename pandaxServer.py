@@ -12,6 +12,11 @@ import redis
 
 class PandaX(ApplicationSession):
     def __init__(self, config=None):
+        """
+        Constructor used to instantiate class variables.
+
+        :param config:
+        """
         ApplicationSession.__init__(self, config)
         self.cookies = None
         self.oauthCookie = None
@@ -24,10 +29,21 @@ class PandaX(ApplicationSession):
         self.user_to_topics = {}
 
     def onConnect(self):
+        """
+        Event on connect that will pass the realm configuration.
+
+        :return:
+        """
         self.join(self.config.realm)
 
     @inlineCallbacks
     def onJoin(self, details):
+        """
+        Event on server join that will hook all the needed events.
+
+        :param details:
+        :return:
+        """
         yield self.subscribe(self.on_session_join, u'wamp.session.on_join')
         yield self.subscribe(self.on_leave, u'wamp.session.on_leave')
         yield self.subscribe(self.on_subscribe, u'wamp.subscription.on_subscribe')
@@ -37,6 +53,12 @@ class PandaX(ApplicationSession):
         yield self.register(self.system_private, u"system.private.", options=RegisterOptions(match=u"prefix", details_arg="details"))
 
     def on_leave(self, session):
+        """
+        Event on leave that will remove user sessions and users to topics session.
+
+        :param session:
+        :return:
+        """
         user_sessions = self.user_sessions
         for user_id, sessions in user_sessions.items():
             for session_id, s_id in sessions.copy().items():
@@ -49,6 +71,11 @@ class PandaX(ApplicationSession):
         self.update_users_to_topics_redis()
 
     def update_user_sessions_redis(self):
+        """
+        Helper method used to store user session connections in REDIS.
+
+        :return:
+        """
         r = redis.StrictRedis(host='localhost', port=6379, db=0)
         r.set('socket_user_sessions', self.user_sessions)
 
@@ -56,6 +83,11 @@ class PandaX(ApplicationSession):
             r.set('socket_user_sessions:' + str(user_id), user_socket_id)
 
     def update_users_to_topics_redis(self):
+        """
+        Helper method used to store the topics to users dict in REDIS
+
+        :return:
+        """
         r = redis.StrictRedis(host='localhost', port=6379, db=0)
         r.set('socket_topics_to_users', self.topics_to_users)
 
@@ -67,6 +99,13 @@ class PandaX(ApplicationSession):
                 r.set('socket_user_to_topics:' + str(u), t)
 
     def add_topics_to_users(self, topic, user):
+        """
+        Helper method to add topics to users dict.
+
+        :param topic:
+        :param user:
+        :return:
+        """
         topics_to_users = dict()
         users_to_topics = dict()
 
@@ -85,6 +124,13 @@ class PandaX(ApplicationSession):
         self.update_users_to_topics_redis()
 
     def del_topics_to_users(self, user, topic=None):
+        """
+        Helper method to delete the users from a topic.
+
+        :param user:
+        :param topic:
+        :return:
+        """
         topics_to_users = self.topics_to_users
         users_to_topics = self.users_to_topics
 
@@ -107,12 +153,26 @@ class PandaX(ApplicationSession):
         self.update_users_to_topics_redis()
 
     def on_subscribe_create(self, session, subscription_details):
+        """
+        Event on channel/topic creation. We add the topic to the dict for passing it to PHP backend.
+
+        :param session:
+        :param subscription_details:
+        :return:
+        """
         topic = subscription_details['uri']
         topic_id = subscription_details['id']
         self.topics[topic_id] = topic
         self.topic_ids[topic] = topic_id
 
     def on_unsubscribe(self, session, subscription):
+        """
+        Event on unsubscribe that will remove the user session from the topic session.
+
+        :param session:
+        :param subscription:
+        :return:
+        """
         topic = self.topics[subscription]
         users = self.user_sessions
 
@@ -123,6 +183,13 @@ class PandaX(ApplicationSession):
 
     @inlineCallbacks
     def on_subscribe(self, session, subscription):
+        """
+        Event on subscribe to check if the user is subscribing to his private channel, restricted only to the specific user. If the user is allowed to connect to his private channel than add the user to the connection dictionary for passing it back to the PHP backend for furthur checks.
+
+        :param session:
+        :param subscription:
+        :return:
+        """
         topic = self.topics[subscription]
         users = self.user_sessions
 
@@ -138,6 +205,12 @@ class PandaX(ApplicationSession):
                         self.add_topics_to_users(topic, user_id)
 
     def get_laravel_session(self, session_details):
+        """
+        Get the Laravel Session Cookie for using with the AUTH server.
+
+        :param session_details:
+        :return:
+        """
         cookie = SimpleCookie()
         cookie.load(session_details.get('transport', {}).get('http_headers_received', {}).get('cookie', {}))
 

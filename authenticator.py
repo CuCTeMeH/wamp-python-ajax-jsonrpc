@@ -13,13 +13,17 @@ import urllib
 
 
 class PandaXAuthenticator(ApplicationSession):
+
     redis_jwt_key = 'jwt-python'
 
     @inlineCallbacks
     def onJoin(self, details):
-        # print("session joined")
-        # print(details)
+        """
+        Event on join where we register our wamp callbacks.
 
+        :param details:
+        :return:
+        """
         results = []
         res = yield self.register(self)
         results.extend(res)
