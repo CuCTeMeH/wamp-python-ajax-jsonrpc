@@ -45,13 +45,9 @@ class PandaXAuthenticator(ApplicationSession):
         :param recurse: 
         :return: 
         """
-        # print("WAMP-CRA dynamic authenticator invoked: realm='{}', authid='{}'".format(realm, authid))
-        # print(details)
-        #
         cookie = SimpleCookie()
         cookie.load(details.get('transport', {}).get('http_headers_received', {}).get('cookie', {}))
 
-        # print('authenticate')
         # Even though SimpleCookie is dictionary-like, it internally uses a Morsel object
         # which is incompatible with requests. Manually construct a dictionary instead.
         cookies = {}
@@ -71,7 +67,6 @@ class PandaXAuthenticator(ApplicationSession):
                     payload = {
                         "cookie": urllib.parse.unquote(morsel.value)
                     }
-                    # print(payload)
 
                     response = requests.post('https://dev-auth.probidder.com/api/cookie/decrypt',
                                              data=json.dumps(payload), headers=headers).json()
@@ -90,10 +85,7 @@ class PandaXAuthenticator(ApplicationSession):
 
             cookies[key] = morsel.value
 
-        # print(cookies)
         user = self.is_logged_in(cookies)
-
-        # print(user)
 
         if user['status'] and user['user']['username'] == authid:
             return {
@@ -132,7 +124,6 @@ class PandaXAuthenticator(ApplicationSession):
 
         encoded_key = jwt.encode(encoding_payload, algorithm='RS512', key=key_string)
 
-        # print(encoded_key)
         headers = {
             'content-type': 'application/json'
         }
@@ -141,11 +132,10 @@ class PandaXAuthenticator(ApplicationSession):
             "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
             "assertion": encoded_key.decode("utf-8")
         }
-        # print(payload)
 
         response = requests.post('https://dev-auth.probidder.com/api/oauth/token',
                                  data=json.dumps(payload), headers=headers).json()
-        # print(response)
+
         if 'access_token' in response:
             r.set(PandaXAuthenticator.redis_jwt_key, response['access_token'])
             return response['access_token']
@@ -163,9 +153,6 @@ class PandaXAuthenticator(ApplicationSession):
         :return: 
         """
         token = PandaXAuthenticator.get_auth_token()
-        # print(token)
-        # print('is_logged_in')
-        # return True
 
         headers = {
             'content-type': 'application/json',

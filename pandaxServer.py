@@ -223,7 +223,7 @@ class PandaX(ApplicationSession):
                     morsel.value = r.get(morsel.value).decode("utf-8")
                 else:
                     token = PandaXAuthenticator.get_auth_token()
-                    # print(token)
+
                     headers = {
                         'content-type': 'application/json',
                         'Authorization': 'Bearer ' + token
