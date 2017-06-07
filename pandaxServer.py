@@ -19,6 +19,9 @@ class PandaX(ApplicationSession):
         self.topic_ids = {}
         self.user_sessions = {}
         self.topics_to_users = {}
+        self.users_to_topics = {}
+        self.topics_to_user = {}
+        self.user_to_topics = {}
 
     def onConnect(self):
         self.join(self.config.realm)
@@ -49,26 +52,58 @@ class PandaX(ApplicationSession):
         r = redis.StrictRedis(host='localhost', port=6379, db=0)
         r.set('socket_user_sessions', self.user_sessions)
 
+        for user_id, user_socket_id in self.user_sessions.items():
+            r.set('socket_user_sessions:' + str(user_id), user_socket_id)
+
     def update_users_to_topics_redis(self):
         r = redis.StrictRedis(host='localhost', port=6379, db=0)
         r.set('socket_topics_to_users', self.topics_to_users)
 
+        if self.topics_to_users is not None:
+            for t, u in self.topics_to_users.items():
+                r.set('socket_topic_to_users:' + str(t), u)
+
+            for u, t in self.users_to_topics.items():
+                r.set('socket_user_to_topics:' + str(u), t)
+
     def add_topics_to_users(self, topic, user):
         topics_to_users = dict()
-        topics_to_users[topic] = user
+        users_to_topics = dict()
+
+        if topics_to_users.get(topic, None) is None:
+            topics_to_users[topic] = {}
+
+        if topics_to_users.get(user, None) is None:
+            users_to_topics[user] = {}
+
+        topics_to_users[topic][user] = user
+        users_to_topics[user][topic] = topic
+
         self.topics_to_users = topics_to_users
+        self.users_to_topics = users_to_topics
+
         self.update_users_to_topics_redis()
 
     def del_topics_to_users(self, user, topic=None):
         topics_to_users = self.topics_to_users
+        users_to_topics = self.users_to_topics
+
         if topic is not None:
             topics_to_users = topics_to_users.get(topic, {}).pop(user, None)
+            users_to_topics = users_to_topics.get(user, {}).pop(topic, None)
         else:
             for t, u in topics_to_users.copy().items():
                 if u == user:
                     topics_to_users.pop(u, None)
 
+            for u, tt in users_to_topics.copy().items():
+                if u == user:
+                    for tk, tv in tt.copy().items():
+                        tt.pop(tv, None)
+
         self.topics_to_users = topics_to_users
+        self.users_to_topics = users_to_topics
+
         self.update_users_to_topics_redis()
 
     def on_subscribe_create(self, session, subscription_details):
