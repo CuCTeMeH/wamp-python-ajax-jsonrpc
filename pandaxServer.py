@@ -246,8 +246,8 @@ class PandaX(ApplicationSession):
                         morsel.value = response['cookie']
 
             cookies[key] = morsel.value
-            self.cookies = cookies
-            self.encryptedCookies = encrypted_cookies
+        self.cookies = cookies
+        self.encryptedCookies = encrypted_cookies
         return cookies
 
     def on_session_join(self, session_details):
@@ -281,8 +281,7 @@ class PandaX(ApplicationSession):
         :param url: 
         :param method: 
         :param params: 
-        :param publish: 
-        :param details: 
+        :param details:
         :param recurse: 
         :return: 
         """
