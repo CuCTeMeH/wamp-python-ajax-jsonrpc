@@ -19,6 +19,7 @@ class PandaX(ApplicationSession):
         """
         ApplicationSession.__init__(self, config)
         self.cookies = None
+        self.encryptedCookies = None
         self.oauthCookie = None
         self.topics = {}
         self.topic_ids = {}
@@ -215,9 +216,11 @@ class PandaX(ApplicationSession):
         cookie.load(session_details.get('transport', {}).get('http_headers_received', {}).get('cookie', {}))
 
         cookies = {}
+        encrypted_cookies = {}
         r = redis.StrictRedis(host='localhost', port=6379, db=0)
 
         for key, morsel in cookie.items():
+            encrypted_cookies[key] = morsel.value
             if key == 'laravel_oauth_session':
                 if r.exists(morsel.value):
                     morsel.value = r.get(morsel.value).decode("utf-8")
@@ -244,6 +247,7 @@ class PandaX(ApplicationSession):
 
             cookies[key] = morsel.value
             self.cookies = cookies
+            self.encryptedCookies = encrypted_cookies
         return cookies
 
     def on_session_join(self, session_details):
@@ -299,9 +303,9 @@ class PandaX(ApplicationSession):
             }
 
             if method == 'get':
-                response = requests.get(url, data=json.dumps(payload), headers=headers, cookies=self.cookies).json()
+                response = requests.get(url, data=json.dumps(payload), headers=headers, cookies=self.encryptedCookies).json()
             elif method == 'post':
-                response = requests.post(url, data=json.dumps(payload), headers=headers, cookies=self.cookies).json()
+                response = requests.post(url, data=json.dumps(payload), headers=headers, cookies=self.encryptedCookies).json()
 
             if response and 'error' in response:
                 if recurse is False:
