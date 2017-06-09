@@ -86,6 +86,9 @@ class PandaXAuthenticator(ApplicationSession):
             cookies[key] = morsel.value
 
         user = self.is_logged_in(cookies)
+        if user is False:
+            raise ApplicationError(u'call.rest.error.authenticate.no_such_user',
+                                   'could not authenticate session - no such user {}'.format(authid))
 
         if user['status'] and user['user']['username'] == authid:
             return {
@@ -154,6 +157,10 @@ class PandaXAuthenticator(ApplicationSession):
         """
         token = PandaXAuthenticator.get_auth_token()
 
+        print('COOKIES FOR REQUEST: ')
+        print(cookies)
+        print('COOKIES FOR REQUEST: ')
+
         headers = {
             'content-type': 'application/json',
             'Authorization': 'Bearer ' + token
@@ -170,18 +177,21 @@ class PandaXAuthenticator(ApplicationSession):
                                     data=json.dumps(payload), headers=headers, cookies=cookies).json()
         except Exception as e:
             if recurse is False:
-                raise ApplicationError(u'call.rest.error.is_logged_in',
-                                       'could not authenticate session')
+                return False
+                # raise ApplicationError(u'call.rest.error.is_logged_in',
+                #                        'could not authenticate session')
 
             r.delete(PandaXAuthenticator.redis_jwt_key)
-            return PandaXAuthenticator.is_logged_in(cookies, False)
+            return PandaXAuthenticator.is_logged_in(cookies=cookies, recurse=False)
 
         if response and 'error' in response:
+            print(response)
             if recurse is False:
-                raise ApplicationError(u'call.rest.error.is_logged_in',
-                                       'could not authenticate session')
+                return False
+                # raise ApplicationError(u'call.rest.error.is_logged_in',
+                #                        'could not authenticate session')
 
             r.delete(PandaXAuthenticator.redis_jwt_key)
-            return PandaXAuthenticator.is_logged_in(cookies, False)
+            return PandaXAuthenticator.is_logged_in(cookies=cookies, recurse=False)
 
         return response

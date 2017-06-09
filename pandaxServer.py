@@ -18,9 +18,9 @@ class PandaX(ApplicationSession):
         :param config:
         """
         ApplicationSession.__init__(self, config)
-        self.cookies = None
-        self.encryptedCookies = None
-        self.oauthCookie = None
+        self.cookies = {}
+        self.encryptedCookies = {}
+        self.oauthCookie = {}
         self.topics = {}
         self.topic_ids = {}
         self.user_sessions = {}
@@ -215,6 +215,7 @@ class PandaX(ApplicationSession):
         cookie = SimpleCookie()
         cookie.load(session_details.get('transport', {}).get('http_headers_received', {}).get('cookie', {}))
 
+        user_session_id = session_details.get('session', {})
         cookies = {}
         encrypted_cookies = {}
         r = redis.StrictRedis(host='localhost', port=6379, db=0)
@@ -246,8 +247,8 @@ class PandaX(ApplicationSession):
                         morsel.value = response['cookie']
 
             cookies[key] = morsel.value
-        self.cookies = cookies
-        self.encryptedCookies = encrypted_cookies
+        self.cookies[user_session_id] = cookies
+        self.encryptedCookies[user_session_id] = encrypted_cookies
         return cookies
 
     def on_session_join(self, session_details):
@@ -260,6 +261,8 @@ class PandaX(ApplicationSession):
         cookies = self.get_laravel_session(session_details)
         session_id = session_details.get('session')
         logged_user = PandaXAuthenticator.is_logged_in(cookies)
+        if logged_user is False:
+            return False
         logged_user_request_status = logged_user.get('status')
         if logged_user_request_status:
             user_id = logged_user['user']['id']
@@ -285,8 +288,12 @@ class PandaX(ApplicationSession):
         :param recurse: 
         :return: 
         """
+        user_session_id = details.caller
         token = PandaXAuthenticator.get_auth_token()
-        is_logged_in = PandaXAuthenticator.is_logged_in(self.cookies)
+        is_logged_in = PandaXAuthenticator.is_logged_in(self.cookies[user_session_id])
+        if is_logged_in is False:
+            return False
+
         response = None
 
         if is_logged_in or params['allow_anonymous']:
@@ -302,14 +309,15 @@ class PandaX(ApplicationSession):
             }
 
             if method == 'get':
-                response = requests.get(url, data=json.dumps(payload), headers=headers, cookies=self.encryptedCookies).json()
+                response = requests.get(url, data=json.dumps(payload), headers=headers, cookies=self.encryptedCookies[user_session_id]).json()
             elif method == 'post':
-                response = requests.post(url, data=json.dumps(payload), headers=headers, cookies=self.encryptedCookies).json()
+                response = requests.post(url, data=json.dumps(payload), headers=headers, cookies=self.encryptedCookies[user_session_id]).json()
 
             if response and 'error' in response:
                 if recurse is False:
-                    raise ApplicationError(u'call.rest.error.authenticate',
-                                           'could not authenticate session')
+                    return False
+                    # raise ApplicationError(u'call.rest.error.authenticate',
+                    #                        'could not authenticate session')
 
                 return self.jsonrpc(url=url, method=method, params=params, details=details, recurse=False)
 
