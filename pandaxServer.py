@@ -298,7 +298,7 @@ class PandaX(ApplicationSession):
             payload = {
                 "params": params,
                 "jsonrpc": "2.0",
-                "id": 0,
+                "user": is_logged_in.get('user', {})
             }
 
             if method == 'get':
@@ -311,7 +311,7 @@ class PandaX(ApplicationSession):
                     raise ApplicationError(u'call.rest.error.authenticate',
                                            'could not authenticate session')
 
-                return self.jsonrpc(self, url, method, params, details, False)
+                return self.jsonrpc(url=url, method=method, params=params, details=details, recurse=False)
 
             if response and 'publish' in response:
                 self.publish(procedure, response)
