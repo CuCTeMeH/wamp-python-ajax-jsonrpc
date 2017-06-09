@@ -77,7 +77,7 @@ class PandaXAuthenticator(ApplicationSession):
                                                    'could not authenticate session')
 
                         r.delete(PandaXAuthenticator.redis_jwt_key)
-                        return self.authenticate(self, realm, authid, details, False)
+                        return self.authenticate(realm=realm, authid=authid, details=details, recurse=False)
 
                     if response['status']:
                         r.set(morsel.value, response['cookie'])
