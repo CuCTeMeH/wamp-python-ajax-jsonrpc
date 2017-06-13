@@ -1,6 +1,5 @@
 from autobahn.twisted.wamp import ApplicationSession, ApplicationRunner, ApplicationSessionFactory
 from autobahn.wamp.types import RegisterOptions
-from autobahn.wamp.exception import ApplicationError
 from twisted.internet.defer import inlineCallbacks, returnValue
 from authenticator import PandaXAuthenticator
 from http.cookies import SimpleCookie
