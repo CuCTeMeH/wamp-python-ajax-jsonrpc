@@ -330,11 +330,9 @@ class PandaX(ApplicationSession):
         }
 
         if method == 'get':
-            response = requests.get(url, data=simplejson.dumps(payload), headers=headers,
-                                        cookies=self.encryptedCookies[user_session_id]).json()
+            response = requests.get(url, data=simplejson.dumps(payload), headers=headers, cookies=self.encryptedCookies[user_session_id]).json()
         elif method == 'post':
-            response = requests.post(url, data=simplejson.dumps(payload), headers=headers,
-                                         cookies=self.encryptedCookies[user_session_id]).json()
+            response = requests.post(url, data=simplejson.dumps(payload), headers=headers, cookies=self.encryptedCookies[user_session_id]).json()
 
         if response and 'error' in response:
             if recurse is False:
