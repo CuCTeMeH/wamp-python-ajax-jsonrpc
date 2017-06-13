@@ -157,10 +157,6 @@ class PandaXAuthenticator(ApplicationSession):
         """
         token = PandaXAuthenticator.get_auth_token()
 
-        print('COOKIES FOR REQUEST: ')
-        print(cookies)
-        print('COOKIES FOR REQUEST: ')
-
         headers = {
             'content-type': 'application/json',
             'Authorization': 'Bearer ' + token
