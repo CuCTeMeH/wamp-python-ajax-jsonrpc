@@ -330,29 +330,15 @@ class PandaX(ApplicationSession):
         }
 
         if method == 'get':
-            # try:
             response = requests.get(url, data=simplejson.dumps(payload), headers=headers,
-                                        cookies=self.encryptedCookies[user_session_id])
-            # print(response.content)
-            response = response.json()
-            # ...
-            # except ValueError:
-            #     return True
+                                        cookies=self.encryptedCookies[user_session_id]).json()
         elif method == 'post':
-            # try:
             response = requests.post(url, data=simplejson.dumps(payload), headers=headers,
-                                         cookies=self.encryptedCookies[user_session_id])
-            # print(response.content)
-            response = response.json()
-            # ...
-            # except ValueError:
-            #     return True
+                                         cookies=self.encryptedCookies[user_session_id]).json()
 
         if response and 'error' in response:
             if recurse is False:
                 return False
-                # raise ApplicationError(u'call.rest.error.authenticate',
-                #                        'could not authenticate session')
 
             return self.jsonrpc(url=url, method=method, params=params, details=details, recurse=False)
 
