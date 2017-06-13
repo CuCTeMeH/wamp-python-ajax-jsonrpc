@@ -6,7 +6,7 @@ from twisted.python.failure import Failure
 from http.cookies import SimpleCookie
 import redis
 import requests
-import json
+import simplejson
 import jwt
 import time
 import urllib
@@ -69,7 +69,7 @@ class PandaXAuthenticator(ApplicationSession):
                     }
 
                     response = requests.post('https://dev-auth.probidder.com/api/cookie/decrypt',
-                                             data=json.dumps(payload), headers=headers).json()
+                                             data=simplejson.dumps(payload), headers=headers).json()
 
                     if response and 'error' in response:
                         if recurse is False:
@@ -137,7 +137,7 @@ class PandaXAuthenticator(ApplicationSession):
         }
 
         response = requests.post('https://dev-auth.probidder.com/api/oauth/token',
-                                 data=json.dumps(payload), headers=headers).json()
+                                 data=simplejson.dumps(payload), headers=headers).json()
 
         if 'access_token' in response:
             r.set(PandaXAuthenticator.redis_jwt_key, response['access_token'])
@@ -174,7 +174,7 @@ class PandaXAuthenticator(ApplicationSession):
 
         try:
             response = requests.get('https://dev-auth.probidder.com/api/authenticate/check',
-                                    data=json.dumps(payload), headers=headers, cookies=cookies).json()
+                                    data=simplejson.dumps(payload), headers=headers, cookies=cookies).json()
         except Exception as e:
             if recurse is False:
                 return False
@@ -185,7 +185,6 @@ class PandaXAuthenticator(ApplicationSession):
             return PandaXAuthenticator.is_logged_in(cookies=cookies, recurse=False)
 
         if response and 'error' in response:
-            print(response)
             if recurse is False:
                 return False
                 # raise ApplicationError(u'call.rest.error.is_logged_in',

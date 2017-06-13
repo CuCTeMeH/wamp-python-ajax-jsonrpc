@@ -5,7 +5,7 @@ from twisted.internet.defer import inlineCallbacks, returnValue
 from authenticator import PandaXAuthenticator
 from http.cookies import SimpleCookie
 import requests
-import json
+import simplejson
 import urllib
 import redis
 
@@ -24,6 +24,7 @@ class PandaX(ApplicationSession):
         self.topics = {}
         self.topic_ids = {}
         self.user_sessions = {}
+        self.logged_users = {}
         self.topics_to_users = {}
         self.users_to_topics = {}
         self.topics_to_user = {}
@@ -66,10 +67,20 @@ class PandaX(ApplicationSession):
                 if session_id == session:
                     sessions.pop(session_id)
                     self.del_topics_to_users(user_id)
+                    self.remove_logged_user(session_id)
 
         self.user_sessions = user_sessions
         self.update_user_sessions_redis()
         self.update_users_to_topics_redis()
+
+    def remove_logged_user(self, session):
+        logged_users = self.logged_users
+        for sessions, user_id in logged_users.items():
+            for session_id, s_id in user_id.copy().items():
+                if session_id == session:
+                    sessions.pop(session_id)
+
+        self.logged_users = logged_users
 
     def update_user_sessions_redis(self):
         """
@@ -78,10 +89,10 @@ class PandaX(ApplicationSession):
         :return:
         """
         r = redis.StrictRedis(host='localhost', port=6379, db=0)
-        r.set('socket_user_sessions', self.user_sessions)
+        r.set('socket_user_sessions', simplejson.dumps(self.user_sessions))
 
         for user_id, user_socket_id in self.user_sessions.items():
-            r.set('socket_user_sessions:' + str(user_id), user_socket_id)
+            r.set('socket_user_sessions:' + str(user_id), simplejson.dumps(user_socket_id))
 
     def update_users_to_topics_redis(self):
         """
@@ -94,10 +105,10 @@ class PandaX(ApplicationSession):
 
         if self.topics_to_users is not None:
             for t, u in self.topics_to_users.items():
-                r.set('socket_topic_to_users:' + str(t), u)
+                r.set('socket_topic_to_users:' + str(t), simplejson.dumps(u))
 
             for u, t in self.users_to_topics.items():
-                r.set('socket_user_to_topics:' + str(u), t)
+                r.set('socket_user_to_topics:' + str(u), simplejson.dumps(t))
 
     def add_topics_to_users(self, topic, user):
         """
@@ -108,7 +119,13 @@ class PandaX(ApplicationSession):
         :return:
         """
         topics_to_users = dict()
+        if self.topics_to_users is not None:
+            topics_to_users = self.topics_to_users
+
         users_to_topics = dict()
+        if self.users_to_topics is not None:
+            users_to_topics = self.users_to_topics
+        user = str(user)
 
         if topics_to_users.get(topic, None) is None:
             topics_to_users[topic] = {}
@@ -237,7 +254,7 @@ class PandaX(ApplicationSession):
                     }
 
                     response = requests.post('https://dev-auth.probidder.com/api/cookie/decrypt',
-                                             data=json.dumps(payload), headers=headers).json()
+                                             data=simplejson.dumps(payload), headers=headers).json()
 
                     if response and 'error' in response:
                         return self.get_laravel_session(self, session_details)
@@ -269,6 +286,11 @@ class PandaX(ApplicationSession):
             if self.user_sessions.get(user_id) is None:
                 self.user_sessions[user_id] = {}
             self.user_sessions[user_id][session_id] = session_id
+
+            if self.logged_users.get(session_id) is None:
+                self.logged_users[session_id] = {}
+            self.logged_users[session_id] = logged_user['user']
+
         self.update_user_sessions_redis()
 
     def system_private(self, details=None):
@@ -290,40 +312,54 @@ class PandaX(ApplicationSession):
         """
         user_session_id = details.caller
         token = PandaXAuthenticator.get_auth_token()
-        is_logged_in = PandaXAuthenticator.is_logged_in(self.cookies[user_session_id])
+
+        is_logged_in = self.logged_users.get(user_session_id)
         if is_logged_in is False:
             return False
 
         response = None
 
-        if is_logged_in or params['allow_anonymous']:
-            procedure = details.procedure
-            headers = {
-                'content-type': 'application/json',
-                'Authorization': 'Bearer ' + token
-            }
-            payload = {
-                "params": params,
-                "jsonrpc": "2.0",
-                "user": is_logged_in.get('user', {})
-            }
+        procedure = details.procedure
+        headers = {
+            'content-type': 'application/json',
+            'Authorization': 'Bearer ' + token
+        }
+        payload = {
+            "params": params,
+            "jsonrpc": "2.0",
+            "user": is_logged_in
+        }
 
-            if method == 'get':
-                response = requests.get(url, data=json.dumps(payload), headers=headers, cookies=self.encryptedCookies[user_session_id]).json()
-            elif method == 'post':
-                response = requests.post(url, data=json.dumps(payload), headers=headers, cookies=self.encryptedCookies[user_session_id]).json()
+        if method == 'get':
+            # try:
+            response = requests.get(url, data=simplejson.dumps(payload), headers=headers,
+                                        cookies=self.encryptedCookies[user_session_id])
+            # print(response.content)
+            response = response.json()
+            # ...
+            # except ValueError:
+            #     return True
+        elif method == 'post':
+            # try:
+            response = requests.post(url, data=simplejson.dumps(payload), headers=headers,
+                                         cookies=self.encryptedCookies[user_session_id])
+            # print(response.content)
+            response = response.json()
+            # ...
+            # except ValueError:
+            #     return True
 
-            if response and 'error' in response:
-                if recurse is False:
-                    return False
-                    # raise ApplicationError(u'call.rest.error.authenticate',
-                    #                        'could not authenticate session')
+        if response and 'error' in response:
+            if recurse is False:
+                return False
+                # raise ApplicationError(u'call.rest.error.authenticate',
+                #                        'could not authenticate session')
 
-                return self.jsonrpc(url=url, method=method, params=params, details=details, recurse=False)
+            return self.jsonrpc(url=url, method=method, params=params, details=details, recurse=False)
 
-            if response and 'publish' in response:
-                self.publish(procedure, response)
-                return response
+        if response and 'publish' in response:
+            self.publish(procedure, response)
+            return response
 
         return True
 
