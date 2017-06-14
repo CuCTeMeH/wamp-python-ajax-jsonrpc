@@ -313,7 +313,7 @@ class PandaX(ApplicationSession):
 
         self.async_request(url, payload, headers, self.encryptedCookies[user_session_id], method, procedure)
 
-    def async_request(self, url, payload, headers, cookies, method, procedure, recurse=True):
+    def async_request(self, url, payload, headers, cookies, method, procedure):
         if method == 'get':
             d = treq.get(url, params=payload, headers=headers, cookies=cookies)
         elif method == 'post':
@@ -325,13 +325,7 @@ class PandaX(ApplicationSession):
             deferred = treq.json_content(resp)
 
             def get_json_from_response(response):
-                if response and 'error' in response:
-                    if recurse is False:
-                        return response
-
-                    return self.async_request(url=url, payload=payload, headers=headers, cookies=cookies, method=method, procedure=procedure, recurse=False)
-
-                if response and 'publish' in response:
+                if response and 'publish' in response or response and 'error' in response:
                     self.publish(procedure, response)
 
             deferred.addCallback(get_json_from_response)
