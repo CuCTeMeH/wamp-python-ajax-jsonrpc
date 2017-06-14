@@ -292,8 +292,26 @@ class PandaX(ApplicationSession):
 
         self.update_user_sessions_redis()
 
-    def system_private(self, details=None):
-        return True
+    def system_private(self, url, method, params, details=None):
+        user_session_id = details.caller
+        token = PandaXAuthenticator.get_auth_token()
+
+        is_logged_in = self.logged_users.get(user_session_id)
+        if is_logged_in is False:
+            return False
+
+        procedure = details.procedure
+        headers = {
+            'content-type': 'application/json',
+            'Authorization': 'Bearer ' + token
+        }
+        payload = {
+            "params": simplejson.dumps(params),
+            "jsonrpc": "2.0",
+            "user": simplejson.dumps(is_logged_in)
+        }
+
+        self.async_request(url, payload, headers, self.encryptedCookies[user_session_id], method, procedure)
 
     def async_request(self, url, payload, headers, cookies, method, procedure, recurse=True):
         if method == 'get':
