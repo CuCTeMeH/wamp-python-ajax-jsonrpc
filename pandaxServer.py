@@ -327,15 +327,12 @@ class PandaX(ApplicationSession):
             def get_json_from_response(response):
                 if response and 'error' in response:
                     if recurse is False:
-                        return False
+                        return response
 
                     return self.async_request(url=url, payload=payload, headers=headers, cookies=cookies, method=method, procedure=procedure, recurse=False)
 
                 if response and 'publish' in response:
                     self.publish(procedure, response)
-                    return response
-
-                return True
 
             deferred.addCallback(get_json_from_response)
 
