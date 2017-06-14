@@ -7,7 +7,7 @@ import requests
 import simplejson
 import urllib
 import redis
-
+import treq
 
 class PandaX(ApplicationSession):
     def __init__(self, config=None):
@@ -295,7 +295,35 @@ class PandaX(ApplicationSession):
     def system_private(self, details=None):
         return True
 
-    def jsonrpc(self, url, method, params, details=None, recurse=True):
+    def async_request(self, url, payload, headers, cookies, method, procedure, recurse=True):
+        if method == 'get':
+            d = treq.get(url, params=payload, headers=headers, cookies=cookies)
+        elif method == 'post':
+            d = treq.post(url, params=payload, headers=headers, cookies=cookies)
+        else:
+            return False
+
+        def get_response(resp):
+            deferred = treq.json_content(resp)
+
+            def get_json_from_response(response):
+                if response and 'error' in response:
+                    if recurse is False:
+                        return False
+
+                    return self.async_request(url=url, payload=payload, headers=headers, cookies=cookies, method=method, procedure=procedure, recurse=False)
+
+                if response and 'publish' in response:
+                    self.publish(procedure, response)
+                    return response
+
+                return True
+
+            deferred.addCallback(get_json_from_response)
+
+        d.addCallback(get_response)
+
+    def jsonrpc(self, url, method, params, details=None):
         """
         This is the main method that is used to send the URL via the request.
         After that it will publish to all subscribers the result.
@@ -316,33 +344,15 @@ class PandaX(ApplicationSession):
         if is_logged_in is False:
             return False
 
-        response = None
-
         procedure = details.procedure
         headers = {
             'content-type': 'application/json',
             'Authorization': 'Bearer ' + token
         }
         payload = {
-            "params": params,
+            "params": simplejson.dumps(params),
             "jsonrpc": "2.0",
-            "user": is_logged_in
+            "user": simplejson.dumps(is_logged_in)
         }
 
-        if method == 'get':
-            response = requests.get(url, data=simplejson.dumps(payload), headers=headers, cookies=self.encryptedCookies[user_session_id]).json()
-        elif method == 'post':
-            response = requests.post(url, data=simplejson.dumps(payload), headers=headers, cookies=self.encryptedCookies[user_session_id]).json()
-
-        if response and 'error' in response:
-            if recurse is False:
-                return False
-
-            return self.jsonrpc(url=url, method=method, params=params, details=details, recurse=False)
-
-        if response and 'publish' in response:
-            self.publish(procedure, response)
-            return response
-
-        return True
-
+        self.async_request(url, payload, headers, self.encryptedCookies[user_session_id], method, procedure)
