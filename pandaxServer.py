@@ -306,6 +306,15 @@ class PandaX(ApplicationSession):
         self.update_user_sessions_redis()
 
     def http_request(self, url, method, params, details=None):
+        """
+        Make a Async HTTP Request.
+
+        :param url:
+        :param method:
+        :param params:
+        :param details:
+        :return:
+        """
         user_session_id = details.caller
         token = PandaXAuthenticator.get_auth_token()
 
@@ -327,6 +336,17 @@ class PandaX(ApplicationSession):
         self.async_request(url, payload, headers, self.encryptedCookies[user_session_id], method, procedure)
 
     def async_request(self, url, payload, headers, cookies, method, procedure):
+        """
+        Async Request using treq.
+
+        :param url:
+        :param payload:
+        :param headers:
+        :param cookies:
+        :param method:
+        :param procedure:
+        :return:
+        """
         if method == 'get':
             d = treq.get(url, params=payload, headers=headers, cookies=cookies)
         elif method == 'post':
@@ -335,9 +355,20 @@ class PandaX(ApplicationSession):
             return False
 
         def get_response(resp):
+            """
+            Get response from async Request using treq.
+
+            :param resp:
+            :return:
+            """
             deferred = treq.json_content(resp)
 
             def get_json_from_response(response):
+                """
+                Get JSON from async Response using treq and publish to channel if allowed.
+                :param response:
+                :return:
+                """
                 if response and 'publish' in response or response and 'error' in response:
                     self.publish(procedure, response)
 
@@ -364,6 +395,7 @@ class PandaX(ApplicationSession):
     def system_private(self, url, method, params, details=None):
         """
         Make a call to the private channel.
+
         :param url:
         :param method:
         :param params:
