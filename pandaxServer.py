@@ -9,6 +9,7 @@ import urllib
 import redis
 import treq
 
+
 class PandaX(ApplicationSession):
     def __init__(self, config=None):
         """
@@ -105,7 +106,7 @@ class PandaX(ApplicationSession):
         if self.topics_to_users is not None:
             for t, u in self.topics_to_users.items():
                 r.set('socket_topic_to_users:' + str(t), simplejson.dumps(u))
-
+        if self.users_to_topics is not None:
             for u, t in self.users_to_topics.items():
                 r.set('socket_user_to_topics:' + str(u), simplejson.dumps(t))
 
@@ -117,19 +118,14 @@ class PandaX(ApplicationSession):
         :param user:
         :return:
         """
-        topics_to_users = dict()
-        if self.topics_to_users is not None:
-            topics_to_users = self.topics_to_users
-
-        users_to_topics = dict()
-        if self.users_to_topics is not None:
-            users_to_topics = self.users_to_topics
+        topics_to_users = self.topics_to_users
+        users_to_topics = self.users_to_topics
         user = str(user)
 
         if topics_to_users.get(topic, None) is None:
             topics_to_users[topic] = {}
 
-        if topics_to_users.get(user, None) is None:
+        if users_to_topics.get(user, None) is None:
             users_to_topics[user] = {}
 
         topics_to_users[topic][user] = user
@@ -139,6 +135,25 @@ class PandaX(ApplicationSession):
         self.users_to_topics = users_to_topics
 
         self.update_users_to_topics_redis()
+
+    def delete_keys_from_dict(self, dict_del, lst_keys):
+        """
+        Gracefully delete keys from nested dictionary
+
+        :param dict_del:
+        :param lst_keys:
+        :return:
+        """
+        for k in lst_keys:
+            try:
+                del dict_del[k]
+            except KeyError:
+                pass
+        for v in dict_del.values():
+            if isinstance(v, dict):
+                self.delete_keys_from_dict(v, lst_keys)
+
+        return dict_del
 
     def del_topics_to_users(self, user, topic=None):
         """
@@ -155,12 +170,10 @@ class PandaX(ApplicationSession):
             topics_to_users = topics_to_users.get(topic, {}).pop(user, None)
             users_to_topics = users_to_topics.get(user, {}).pop(topic, None)
         else:
-            for t, u in topics_to_users.copy().items():
-                if u == user:
-                    topics_to_users.pop(u, None)
+            topics_to_users = self.delete_keys_from_dict(topics_to_users, [str(user)])
 
             for u, tt in users_to_topics.copy().items():
-                if u == user:
+                if u == str(user):
                     for tk, tv in tt.copy().items():
                         tt.pop(tv, None)
 
