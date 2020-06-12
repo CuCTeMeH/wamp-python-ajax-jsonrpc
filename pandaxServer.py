@@ -265,7 +265,7 @@ class PandaX(ApplicationSession):
                         "cookie": urllib.parse.unquote(morsel.value)
                     }
 
-                    response = requests.post('https://dev-auth.probidder.com/api/cookie/decrypt',
+                    response = requests.post('http://localhost/api/cookie/decrypt',
                                              data=simplejson.dumps(payload), headers=headers).json()
 
                     if response and 'error' in response:

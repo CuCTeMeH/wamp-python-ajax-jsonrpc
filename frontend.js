@@ -32,7 +32,7 @@ function onchallenge (session, method, extra) {
 
 
 var connection = new autobahn.Connection({
-   url: 'wss://ws_test.probidder.com:8080/ws',
+   url: 'wss://ws_test.localhost:8080/ws',
    realm: 'probidder',
 
    // The following authentication information is for authenticating
@@ -69,7 +69,7 @@ connection.onopen = function (session, details) {
                 //         }
                 //      );
 
-                session.call('jsonrpc.chat.cihomes.admin', [url = 'http://dev-marketplace.probidder.com/api/sales', method = 'get', params = [], publish = true]);
+                session.call('jsonrpc.chat.cihomes.admin', [url = 'http://localhost/api/sales', method = 'get', params = [], publish = true]);
 
             },
             function (err) {
@@ -85,15 +85,15 @@ connection.onopen = function (session, details) {
 //             function (sub) {
 //                 // console.log(sub);
 //                 console.log("subscribed", sub.id);
-//                 session.call('call.rest.jsonrpc', [url = 'http://dev-marketplace.probidder.com/api/sales', method = 'get', params = []]);
+//                 session.call('call.rest.jsonrpc', [url = 'http://localhost/api/sales', method = 'get', params = []]);
 //             },
 //             function (err) {
 //                 console.log("error:", err);
 //             }
 //         );
 //
-// session.call('call.rest.jsonrpc', [url = 'http://dev-marketplace.probidder.com/api/sales', method = 'get', params = []]);
-    // session.call('call.rest.jsonrpc', [url = 'http://dev-marketplace.probidder.com/api/sales', method = 'get', params = []]);
+// session.call('call.rest.jsonrpc', [url = 'http://localhost/api/sales', method = 'get', params = []]);
+    // session.call('call.rest.jsonrpc', [url = 'http://localhost/api/sales', method = 'get', params = []]);
 
     // session.call('call.rest.jsonrpc', ["hello"]).then(
     //      function (res) {
@@ -104,12 +104,7 @@ connection.onopen = function (session, details) {
     //      }
     // );
 
-   // session.subscribe('com.call.sexydemo');
    // session.call('call.rest.jsonrpc', 'test1');
-   // session.publish('com.call.sexydemo', 'test2');
-   // session.publish('com.call.sexydemo', 'test3');
-   // session.publish('com.call.sexydemo', 'test4');
-   // session.publish('com.call.sexydemo', 'test5');
 };
 
 connection.open();

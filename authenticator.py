@@ -68,7 +68,7 @@ class PandaXAuthenticator(ApplicationSession):
                         "cookie": urllib.parse.unquote(morsel.value)
                     }
 
-                    response = requests.post('https://dev-auth.probidder.com/api/cookie/decrypt',
+                    response = requests.post('http://localhost/api/cookie/decrypt',
                                              data=simplejson.dumps(payload), headers=headers).json()
 
                     if response and 'error' in response:
@@ -114,7 +114,7 @@ class PandaXAuthenticator(ApplicationSession):
             return token.decode("utf-8")
 
         encoding_payload = {
-            'aud': 'https://dev-auth.probidder.com',
+            'aud': 'http://localhost',
             'exp': int(time.time() + 1000),
             'iat': int(time.time()),
             'sub': 'WS',
@@ -136,7 +136,7 @@ class PandaXAuthenticator(ApplicationSession):
             "assertion": encoded_key.decode("utf-8")
         }
 
-        response = requests.post('https://dev-auth.probidder.com/api/oauth/token',
+        response = requests.post('http://localhost/api/oauth/token',
                                  data=simplejson.dumps(payload), headers=headers).json()
 
         if 'access_token' in response:
@@ -169,7 +169,7 @@ class PandaXAuthenticator(ApplicationSession):
         r = redis.StrictRedis(host='localhost', port=6379, db=0)
 
         try:
-            response = requests.get('https://dev-auth.probidder.com/api/authenticate/check',
+            response = requests.get('http://localhost/api/authenticate/check',
                                     data=simplejson.dumps(payload), headers=headers, cookies=cookies).json()
         except Exception as e:
             if recurse is False:
